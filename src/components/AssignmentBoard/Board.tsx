@@ -1,6 +1,6 @@
 import { DndContext } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppStore } from '../../state/store';
 import { Column } from './Column';
 import { computeGroupDistribution, computeUnassignedDistribution } from '../../utils/charts';

@@ -10,6 +10,10 @@ function App() {
   const step = useAppStore(s => s.currentStep);
   const hydrate = useAppStore(s => s.hydrate);
 
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
   return (
     <div style={{ padding: 16 }}>
       {step === 'setup' && <InitialSetup />}
