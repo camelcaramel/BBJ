@@ -18,7 +18,7 @@ export function ExcelUploader() {
   };
 
   return (
-    <div>
+    <div className="panel">
       <h2>엑셀 업로드</h2>
       <input
         type="file"
@@ -31,7 +31,7 @@ export function ExcelUploader() {
       {subjectsPreview.length > 0 && (
         <p>과목 예시: {subjectsPreview.join(', ')}{subjectsPreview.length === 10 ? ' ...' : ''}</p>
       )}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
       <p>양식: 첫 행에 '순번','반','번호','이름', 그리고 과목명 열들. 과목 열에는 O/1/TRUE 등으로 표기.</p>
     </div>
   );

@@ -16,9 +16,9 @@ export function FilterPanel() {
   const [subject, setSubject] = useState('');
 
   return (
-    <div style={{ border: '1px solid #ddd', padding: 8, borderRadius: 6 }}>
+    <div className="panel">
       <div style={{ fontWeight: 600, marginBottom: 6 }}>필터</div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+      <div className="cluster" style={{ marginBottom: 8 }}>
         <label>그룹</label>
         <select value={filters.groupId ?? ''} onChange={e => setFilters({ ...filters, groupId: e.target.value || undefined })}>
           <option value="">전체</option>
@@ -29,10 +29,10 @@ export function FilterPanel() {
         <datalist id="subjects">
           {allSubjects.map(s => <option key={s} value={s} />)}
         </datalist>
-        <button onClick={() => setFilters({ ...filters, subjectOptions: [...new Set([...(filters.subjectOptions ?? []), subject].filter(Boolean))] })}>추가</button>
-        <button onClick={() => setFilters({ groupId: filters.groupId, subjectOptions: [] })}>과목 초기화</button>
+        <button className="btn" onClick={() => setFilters({ ...filters, subjectOptions: [...new Set([...(filters.subjectOptions ?? []), subject].filter(Boolean))] })}>추가</button>
+        <button className="btn" onClick={() => setFilters({ groupId: filters.groupId, subjectOptions: [] })}>과목 초기화</button>
       </div>
-      <div style={{ fontSize: 12, color: '#555' }}>
+      <div style={{ fontSize: 12 }} className="muted">
         과목 필터: {(filters.subjectOptions ?? []).join(', ') || '없음'}
       </div>
     </div>

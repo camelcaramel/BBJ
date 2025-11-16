@@ -9,11 +9,11 @@ export function ValidationPanel() {
   const classById = useMemo(() => Object.fromEntries(state.classes.map(c => [c.id, c])), [state.classes]);
 
   return (
-    <div style={{ border: '1px solid #ddd', padding: 8, borderRadius: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="panel">
+      <div className="cluster">
         <div style={{ fontWeight: 600 }}>검증</div>
-        <button onClick={() => setOpen(o => !o)}>{open ? '접기' : '결과 보기'}</button>
-        <span style={{ fontSize: 12, color: '#555' }}>
+        <button className="btn" onClick={() => setOpen(o => !o)}>{open ? '접기' : '결과 보기'}</button>
+        <span style={{ fontSize: 12 }} className="muted">
           크기 문제 {result.sizeIssues.length}건, 그룹 문제 {result.groupIssues.length}건
         </span>
       </div>

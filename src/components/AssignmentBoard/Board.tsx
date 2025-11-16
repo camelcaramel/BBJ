@@ -80,19 +80,19 @@ export function AssignmentBoard() {
   };
 
   return (
-    <div>
+    <div className="stack">
       <h2>반 배정</h2>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      <div className="cluster" style={{ marginBottom: 8 }}>
         <div style={{ fontWeight: 600 }}>일괄 이동</div>
-        <span style={{ fontSize: 12, color: '#555' }}>선택: {selectedIds.length}명</span>
+        <span style={{ fontSize: 12 }} className="muted">선택: {selectedIds.length}명</span>
         <select value={bulkTarget} onChange={e => setBulkTarget(e.target.value)}>
           <option value="unassigned">미배정</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <button disabled={selectedIds.length === 0} onClick={() => moveSelected(bulkTarget)}>이동</button>
-        <button disabled={selectedIds.length === 0} onClick={clearSelection}>선택 해제</button>
+        <button className="btn btn--primary" disabled={selectedIds.length === 0} onClick={() => moveSelected(bulkTarget)}>이동</button>
+        <button className="btn" disabled={selectedIds.length === 0} onClick={clearSelection}>선택 해제</button>
         <span style={{ marginLeft: 'auto' }} />
-        <button onClick={() => {
+        <button className="btn" onClick={() => {
           const data = exportJson();
           const blob = new Blob([data], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
@@ -102,7 +102,7 @@ export function AssignmentBoard() {
           a.click();
           URL.revokeObjectURL(url);
         }}>JSON 내보내기</button>
-        <label style={{ border: '1px solid #ddd', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}>
+        <label className="btn" style={{ cursor: 'pointer' }}>
           JSON 가져오기
           <input type="file" accept="application/json" style={{ display: 'none' }} onChange={async e => {
             const f = e.target.files?.[0];
@@ -112,8 +112,8 @@ export function AssignmentBoard() {
           }} />
         </label>
       </div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-        <button onClick={() => {
+      <div className="cluster" style={{ marginBottom: 8 }}>
+        <button className="btn" onClick={() => {
           const data = exportJson();
           const blob = new Blob([data], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
@@ -123,7 +123,7 @@ export function AssignmentBoard() {
           a.click();
           URL.revokeObjectURL(url);
         }}>JSON 내보내기</button>
-        <label style={{ border: '1px solid #ddd', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}>
+        <label className="btn" style={{ cursor: 'pointer' }}>
           JSON 가져오기
           <input type="file" accept="application/json" style={{ display: 'none' }} onChange={async e => {
             const f = e.target.files?.[0];
@@ -140,10 +140,10 @@ export function AssignmentBoard() {
       </div>
       {selectedGroup && (
         <div style={{ marginBottom: 16, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <div className="cluster" style={{ marginBottom: 8 }}>
             <div style={{ fontWeight: 600 }}>{selectedGroup.name} 분포</div>
             <span style={{ marginLeft: 'auto' }} />
-            <label style={{ fontSize: 12, color: '#555' }}>차트 그룹</label>
+            <label style={{ fontSize: 12 }} className="muted">차트 그룹</label>
             <select
               value={filters.groupId ?? (groups[0]?.id ?? '')}
               onChange={e => setFilters({ ...filters, groupId: e.target.value || undefined })}
@@ -160,7 +160,7 @@ export function AssignmentBoard() {
         <div style={{ marginBottom: 16, minWidth: 0 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>미배정 분포 (총 {unassignedTotal}명)</div>
           <StackedBarRecharts points={[unassignedPoint]} group={selectedGroup} />
-          <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>
+          <div style={{ fontSize: 12 }} className="muted">
             {(() => {
               const totals = selectedGroup.options.map(opt => Number((unassignedPoint as any)[opt] || 0));
               const total = totals.reduce((a, b) => a + b, 0) || 0;

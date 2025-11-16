@@ -16,21 +16,22 @@ export function StudentCard({ student }: { student: Student }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     opacity: isDragging ? 0.6 : 1,
-    border: `1px solid ${isSelected ? '#1976d2' : '#ddd'}`,
-    borderRadius: 6,
+    border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+    borderRadius: '8px',
     padding: 8,
-    background: isSelected ? '#e3f2fd' : '#fff',
+    background: isSelected ? 'color-mix(in srgb, var(--primary) 10%, var(--surface))' : 'var(--surface)',
     position: 'relative' as const
   };
   return (
     <div
       ref={setNodeRef}
+      className="card"
       style={style}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onMouseMove={e => setPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY })}
-      {...listeners}
       {...attributes}
+      onClick={() => toggleSelect(student.id)}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input
@@ -42,8 +43,24 @@ export function StudentCard({ student }: { student: Student }) {
         <div style={{ fontWeight: 600, flex: 1 }}>
           {student.studentNo} - {student.name}
         </div>
+        <button
+          aria-label="드래그하여 이동"
+          onClick={e => e.stopPropagation()}
+          {...listeners}
+          style={{
+            cursor: 'grab',
+            border: '1px solid var(--border)',
+            background: 'var(--surface-2)',
+            borderRadius: 4,
+            padding: '2px 6px',
+            fontSize: 12
+          }}
+          title="드래그 핸들"
+        >
+          ⋮⋮
+        </button>
       </div>
-      <div style={{ fontSize: 12, color: '#555' }}>{student.selectedSubjects.slice(0, 3).join(', ')}{student.selectedSubjects.length > 3 ? ' ...' : ''}</div>
+      <div style={{ fontSize: 12 }} className="muted">{student.selectedSubjects.slice(0, 3).join(', ')}{student.selectedSubjects.length > 3 ? ' ...' : ''}</div>
       {hover && student.selectedSubjects.length > 0 && (
         <div
           style={{
@@ -51,8 +68,8 @@ export function StudentCard({ student }: { student: Student }) {
             left: Math.min(pos.x + 12, 240),
             top: pos.y + 12,
             zIndex: 10,
-            background: '#222',
-            color: '#fff',
+            background: 'var(--text)',
+            color: 'var(--bg)',
             borderRadius: 6,
             padding: '8px 10px',
             boxShadow: '0 6px 18px rgba(0,0,0,0.25)',

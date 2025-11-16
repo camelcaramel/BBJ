@@ -14,9 +14,9 @@ export function SortingPanel() {
   const clearRules = () => setRules([]);
 
   return (
-    <div style={{ border: '1px solid #ddd', padding: 8, borderRadius: 6 }}>
+    <div className="panel">
       <div style={{ fontWeight: 600, marginBottom: 6 }}>정렬</div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+      <div className="cluster" style={{ marginBottom: 8 }}>
         <select value={draft.field} onChange={e => setDraft({ ...draft, field: e.target.value as any })}>
           <option value="name">이름</option>
           <option value="studentNo">학번</option>
@@ -29,10 +29,10 @@ export function SortingPanel() {
           <option value="asc">오름차순</option>
           <option value="desc">내림차순</option>
         </select>
-        <button onClick={addRule}>추가</button>
-        <button onClick={clearRules}>초기화</button>
+        <button className="btn" onClick={addRule}>추가</button>
+        <button className="btn" onClick={clearRules}>초기화</button>
       </div>
-      <div style={{ fontSize: 12, color: '#555' }}>
+      <div style={{ fontSize: 12 }} className="muted">
         현재 규칙: {rules.map((r, i) => `${i + 1}. ${r.field}${r.field === 'subject' ? `(${r.subject})` : ''} ${r.direction}`).join(' | ') || '없음'}
       </div>
     </div>

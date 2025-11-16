@@ -6,10 +6,11 @@ export type ChartPoint = {
 };
 
 export function computeGroupDistribution(state: AppState, group: Group): ChartPoint[] {
-  const optSet = new Set(group.options);
+  const options = Array.from(new Set(group.options.map(o => o.trim()).filter(Boolean)));
+  const optSet = new Set(options);
   return state.classes.map(cls => {
     const row: ChartPoint = { class: cls.name };
-    for (const opt of group.options) row[opt] = 0;
+    for (const opt of options) row[opt] = 0;
     for (const sid of cls.studentIds) {
       const s = state.students[sid];
       for (const subj of s.selectedSubjects) {
@@ -23,9 +24,10 @@ export function computeGroupDistribution(state: AppState, group: Group): ChartPo
 }
 
 export function computeUnassignedDistribution(state: AppState, group: Group): ChartPoint {
-  const optSet = new Set(group.options);
+  const options = Array.from(new Set(group.options.map(o => o.trim()).filter(Boolean)));
+  const optSet = new Set(options);
   const row: ChartPoint = { class: '미배정' };
-  for (const opt of group.options) row[opt] = 0;
+  for (const opt of options) row[opt] = 0;
   for (const sid of state.unassignedIds) {
     const s = state.students[sid];
     for (const subj of s.selectedSubjects) {
@@ -37,7 +39,7 @@ export function computeUnassignedDistribution(state: AppState, group: Group): Ch
   return row;
 }
 
-export const defaultColor = '#90caf9';
+export const defaultColor = 'var(--primary)';
 export function colorFor(option: string): string {
   // simple deterministic color by hash
   let hash = 0;

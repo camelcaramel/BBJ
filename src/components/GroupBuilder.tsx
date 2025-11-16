@@ -88,19 +88,19 @@ export function GroupBuilder() {
   };
 
   return (
-    <div>
+    <div className="stack">
       <h2>그룹 구성</h2>
       {allSubjects.length === 0 && (
-        <div style={{ color: '#d32f2f', marginBottom: 8 }}>
+        <div style={{ color: 'var(--danger)', marginBottom: 8 }}>
           과목이 감지되지 않았습니다. 엑셀에서 과목 셀 값에 과목명 또는 표기(O/1/TRUE)를 사용했는지 확인하세요.
         </div>
       )}
-      <div style={{ display: 'flex', gap: 16 }}>
-        <div style={{ flex: 1 }}>
+      <div className="cluster" style={{ alignItems: 'stretch', gap: 16 }}>
+        <div className="panel" style={{ flex: 1 }}>
           <h3>{editingId ? '그룹 수정' : '새 그룹 만들기'}</h3>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <button onClick={downloadTemplate}>그룹 템플릿 다운로드</button>
-            <label style={{ border: '1px solid #ddd', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}>
+          <div className="cluster" style={{ marginBottom: 8 }}>
+            <button className="btn" onClick={downloadTemplate}>그룹 템플릿 다운로드</button>
+            <label className="btn" style={{ cursor: 'pointer' }}>
               그룹 엑셀 업로드
               <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={e => {
                 const f = e.target.files?.[0];
@@ -108,7 +108,7 @@ export function GroupBuilder() {
               }} />
             </label>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+          <div className="cluster" style={{ marginBottom: 8 }}>
             <label>그룹명</label>
             <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} />
             <label>최소 선택</label>
@@ -123,36 +123,36 @@ export function GroupBuilder() {
               }}
             />
           </div>
-          <div style={{ maxHeight: 240, overflow: 'auto', border: '1px solid #ddd', padding: 8 }}>
+          <div className="panel" style={{ maxHeight: 240, overflow: 'auto' }}>
             {allSubjects.map(opt => (
               <label key={opt} style={{ display: 'block' }}>
                 <input type="checkbox" checked={draft.options.includes(opt)} onChange={() => toggleOption(opt)} /> {opt}
               </label>
             ))}
           </div>
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-            <button onClick={saveGroup}>{editingId ? '수정 저장' : '그룹 저장'}</button>
-            <button onClick={resetNew}>새로 만들기</button>
+          <div className="cluster" style={{ marginTop: 8 }}>
+            <button className="btn btn--primary" onClick={saveGroup}>{editingId ? '수정 저장' : '그룹 저장'}</button>
+            <button className="btn" onClick={resetNew}>새로 만들기</button>
           </div>
         </div>
-        <div style={{ flex: 1 }}>
+        <div className="panel" style={{ flex: 1 }}>
           <h3>그룹 목록</h3>
           {groups.length === 0 && <p>아직 그룹이 없습니다.</p>}
           {groups.map(g => (
-            <div key={g.id} style={{ border: '1px solid #ddd', marginBottom: 8, padding: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div key={g.id} className="card" style={{ marginBottom: 8 }}>
+              <div className="cluster" style={{ alignItems: 'center' }}>
                 <div style={{ fontWeight: 600, flex: 1 }}>{g.name}</div>
-                <button onClick={() => startEdit(g)}>편집</button>
-                <button onClick={() => deleteGroup(g.id)} style={{ color: '#d32f2f' }}>삭제</button>
+                <button className="btn" onClick={() => startEdit(g)}>편집</button>
+                <button className="btn btn--danger" onClick={() => deleteGroup(g.id)}>삭제</button>
               </div>
               <div>선택 범위: {g.minSelect} ~ {g.maxSelect ?? '제한 없음'}</div>
-              <div style={{ fontSize: 12, color: '#555' }}>{g.options.join(', ')}</div>
+              <div style={{ fontSize: 12 }} className="muted">{g.options.join(', ')}</div>
             </div>
           ))}
         </div>
       </div>
       <div style={{ marginTop: 16 }}>
-        <button onClick={() => setStep('assign')}>배정 화면으로 이동</button>
+        <button className="btn btn--primary" onClick={() => setStep('assign')}>배정 화면으로 이동</button>
       </div>
     </div>
   );
