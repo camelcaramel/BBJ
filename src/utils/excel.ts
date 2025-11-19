@@ -27,6 +27,19 @@ export function parseStudentsFromWorkbook(workbook: XLSX.WorkBook): ParseResult 
     const studentNo = number || (klass && row['번호'] ? `${klass}-${row['번호']}` : number);
     const rawId = seq || (klass && row['번호'] ? `${klass}-${row['번호']}` : studentNo) || '';
 
+    let id = '';
+    let classNum: string | undefined;
+    let studentNum: number | undefined;
+
+    if (klass && row['번호']) {
+      classNum = String(klass).trim();
+      studentNum = Number(row['번호']);
+      const numStr = studentNum < 10 ? `0${studentNum}` : String(studentNum);
+      id = `${classNum}-${numStr}`;
+    } else {
+      id = (rawId || `${name}-${students.length + 1}`).toString();
+    }
+
     const selectedSubjects: string[] = [];
     Object.keys(row).forEach(k => {
       if (metaHeaders.has(k)) return;
@@ -52,8 +65,14 @@ export function parseStudentsFromWorkbook(workbook: XLSX.WorkBook): ParseResult 
       }
     });
 
-    const id = (rawId || `${name}-${students.length + 1}`).toString();
-    students.push({ id, studentNo: studentNo || id, name, selectedSubjects: Array.from(new Set(selectedSubjects)) });
+    students.push({
+      id,
+      studentNo: studentNo || id,
+      name,
+      selectedSubjects: Array.from(new Set(selectedSubjects)),
+      classNum,
+      studentNum
+    });
   }
 
   return { students, subjectsCatalog: Array.from(subjectSet) };
@@ -116,6 +135,19 @@ export async function parseGroupsFromFile(file: File): Promise<Group[]> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf);
   return parseGroupsFromWorkbook(wb);
+}
+
+export function createSelectionTemplateBlob(): Blob {
+  const headers = ['반', '번호', '이름', '수학', '과학', '영어'];
+  const data = [
+    ['1', '1', '홍길동', 'O', '', 'O'],
+    ['1', '2', '김철수', '', 'O', 'O']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Selection');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
 

@@ -26,7 +26,15 @@ function App() {
   return (
     <div className="container">
       <div className="cluster" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>반배정 도우미</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h2 style={{ margin: 0 }}>반배정 도우미</h2>
+          <button
+            onClick={() => setStep('auto-assign')}
+            style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+          >
+            Auto Assign
+          </button>
+        </div>
         <ThemeToggle />
       </div>
       {step === 'setup' && <InitialSetup />}

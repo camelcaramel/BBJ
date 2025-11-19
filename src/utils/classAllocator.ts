@@ -7,6 +7,8 @@ export interface StudentInfo {
   name: string;
   gender: string;
   score: number;
+  classNum?: string;
+  studentNum?: number;
 }
 
 export interface SubjectMeta {
@@ -24,6 +26,8 @@ export interface StudentData {
   gender: string;
   score: number;
   subjects: string[]; // List of subject codes
+  classNum?: string;
+  studentNum?: number;
 }
 
 export interface ClassGroup {
@@ -73,12 +77,38 @@ export async function parseStudentInfo(file: File): Promise<StudentInfo[]> {
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows: any[] = XLSX.utils.sheet_to_json(sheet);
 
-  return rows.map(row => ({
-    id: String(row['학번'] || row['ID'] || '').trim(),
-    name: String(row['이름'] || row['Name'] || '').trim(),
-    gender: String(row['성별'] || row['Gender'] || '').trim(),
-    score: Number(row['석차백분율'] || row['Score'] || 0),
-  })).filter(s => s.id);
+  return rows.map(row => {
+    const name = String(row['이름'] || row['Name'] || '').trim();
+    const gender = String(row['성별'] || row['Gender'] || '').trim();
+    const score = Number(row['석차백분율'] || row['Score'] || 0);
+
+    const classVal = row['반'] || row['Class'];
+    const numVal = row['번호'] || row['Number'];
+    const idVal = row['학번'] || row['ID'];
+
+    let id = '';
+    let classNum: string | undefined;
+    let studentNum: number | undefined;
+
+    if (classVal && numVal) {
+      classNum = String(classVal).trim();
+      studentNum = Number(numVal);
+      // Pad number with 0 if less than 10 for consistent ID (e.g. 1-01)
+      const numStr = studentNum < 10 ? `0${studentNum}` : String(studentNum);
+      id = `${classNum}-${numStr}`;
+    } else {
+      id = String(idVal || '').trim();
+    }
+
+    return {
+      id,
+      name,
+      gender,
+      score,
+      classNum,
+      studentNum
+    };
+  }).filter(s => s.id);
 }
 
 export async function parseSubjectMeta(file: File): Promise<SubjectMeta[]> {
@@ -129,7 +159,7 @@ export function runAdaptiveClustering(
     let foundCluster = true;
     while (foundCluster) {
       foundCluster = false;
-      
+
       // 1. Generate Combinations & Calculate Support
       // Optimization: Instead of generating all combinations, iterate students and count their k-combinations
       const comboCounts = new Map<string, { count: number, students: StudentData[], subjects: string[] }>();
@@ -137,12 +167,12 @@ export function runAdaptiveClustering(
       for (const student of remainingStudents) {
         // Get valid subjects for this student (present in subjectMap)
         const validSubjects = student.subjects.filter(s => subjectMap.has(s));
-        
+
         if (validSubjects.length < k) continue;
 
         // Generate k-combinations for this student
         const combos = getCombinations(validSubjects, k);
-        
+
         for (const combo of combos) {
           const key = combo.sort().join('|');
           if (!comboCounts.has(key)) {
@@ -167,9 +197,9 @@ export function runAdaptiveClustering(
         // Spec says: "Support highest, then Weight highest"
         // Let's use a weighted score: Support * 1000 + Weight (assuming weight < 1000)
         // Actually, let's follow spec strictly: Support is primary.
-        
-        const metric = entry.count * 10000 + weightSum; 
-        
+
+        const metric = entry.count * 10000 + weightSum;
+
         if (metric > bestMetric) {
           bestMetric = metric;
           bestComboKey = key;
@@ -179,10 +209,10 @@ export function runAdaptiveClustering(
       if (bestComboKey) {
         const bestEntry = comboCounts.get(bestComboKey)!;
         const targetStudents = bestEntry.students;
-        
+
         // 3. Class Creation & Validation
         const numClasses = Math.floor(targetStudents.length / cMax);
-        
+
         // If we can't form at least one full class (or close to it), 
         // but we have enough for min size... 
         // Spec says: N_class = Floor(Size / C_max). If N < 1, Pass.
@@ -200,47 +230,47 @@ export function runAdaptiveClustering(
         // If I have 50 students, C_max=20. Floor(2.5) = 2 classes. 40 students assigned. 10 remain.
         // If I have 25 students, C_max=28. Floor(0.89) = 0. -> Pass.
         // This logic leaves "remainders" for lower K or Phase 3.
-        
+
         if (numClasses >= 1) {
-           // Check Teacher Constraints
-           const comboSubjects = bestEntry.subjects;
-           let warnings: string[] = [];
-           for (const subCode of comboSubjects) {
-             const sub = subjectMap.get(subCode);
-             if (sub && numClasses > sub.teacherCount) {
-               warnings.push(`Teacher shortage for ${sub.name} (${sub.teacherCount} < ${numClasses})`);
-             }
-           }
+          // Check Teacher Constraints
+          const comboSubjects = bestEntry.subjects;
+          let warnings: string[] = [];
+          for (const subCode of comboSubjects) {
+            const sub = subjectMap.get(subCode);
+            if (sub && numClasses > sub.teacherCount) {
+              warnings.push(`Teacher shortage for ${sub.name} (${sub.teacherCount} < ${numClasses})`);
+            }
+          }
 
-           // Assign Students
-           // Sort by score/gender for balancing (simple round-robin for now)
-           // We need to pick exactly numClasses * C_max students? 
-           // Or distribute all targetStudents into numClasses?
-           // Spec: "Assign to N_class classes... Assigned students removed from S_remain"
-           // Usually we want to fill classes to Max.
-           
-           const studentsToAssignCount = numClasses * cMax;
-           // We take the "best" students? Or just first N?
-           // Let's take first N for now.
-           const studentsToAssign = targetStudents.slice(0, studentsToAssignCount);
-           
-           // Create Classes
-           for (let i = 0; i < numClasses; i++) {
-             const classStudents = studentsToAssign.slice(i * cMax, (i + 1) * cMax);
-             classes.push({
-               id: classCounter++,
-               name: `${classCounter-1}반`,
-               coreSubjects: comboSubjects,
-               students: classStudents,
-               warnings: [...warnings]
-             });
-           }
+          // Assign Students
+          // Sort by score/gender for balancing (simple round-robin for now)
+          // We need to pick exactly numClasses * C_max students? 
+          // Or distribute all targetStudents into numClasses?
+          // Spec: "Assign to N_class classes... Assigned students removed from S_remain"
+          // Usually we want to fill classes to Max.
 
-           // Remove assigned students from remainingStudents
-           const assignedIds = new Set(studentsToAssign.map(s => s.id));
-           remainingStudents = remainingStudents.filter(s => !assignedIds.has(s.id));
-           
-           foundCluster = true; // Continue searching in this K
+          const studentsToAssignCount = numClasses * cMax;
+          // We take the "best" students? Or just first N?
+          // Let's take first N for now.
+          const studentsToAssign = targetStudents.slice(0, studentsToAssignCount);
+
+          // Create Classes
+          for (let i = 0; i < numClasses; i++) {
+            const classStudents = studentsToAssign.slice(i * cMax, (i + 1) * cMax);
+            classes.push({
+              id: classCounter++,
+              name: `${classCounter - 1}반`,
+              coreSubjects: comboSubjects,
+              students: classStudents,
+              warnings: [...warnings]
+            });
+          }
+
+          // Remove assigned students from remainingStudents
+          const assignedIds = new Set(studentsToAssign.map(s => s.id));
+          remainingStudents = remainingStudents.filter(s => !assignedIds.has(s.id));
+
+          foundCluster = true; // Continue searching in this K
         }
       }
     }
@@ -252,20 +282,19 @@ export function runAdaptiveClustering(
     const chunk = remainingStudents.splice(0, cMax);
     classes.push({
       id: classCounter++,
-      name: `${classCounter-1}반 (Mixed)`,
+      name: `${classCounter - 1}반 (Mixed)`,
       coreSubjects: ['Mixed'],
       students: chunk,
       warnings: ['Mixed Class - Prioritize in Timetable']
     });
   }
-
   return classes;
 }
 
 // Helper for combinations
 function getCombinations(arr: string[], k: number): string[][] {
   const results: string[][] = [];
-  
+
   function helper(start: number, combo: string[]) {
     if (combo.length === k) {
       results.push([...combo]);
@@ -277,7 +306,33 @@ function getCombinations(arr: string[], k: number): string[][] {
       combo.pop();
     }
   }
-  
+
   helper(0, []);
   return results;
+}
+
+export function createStudentInfoTemplateBlob(): Blob {
+  const headers = ['반', '번호', '이름', '성별', '석차백분율'];
+  const data = [
+    ['1', '1', '홍길동', '남', '95'],
+    ['1', '2', '김철수', '남', '88']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'StudentInfo');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+export function createSubjectMetaTemplateBlob(): Blob {
+  const headers = ['과목코드', '과목명', '교사수', '학점', '교과군'];
+  const data = [
+    ['MAT1', '수학Ⅰ', '2', '4', '수학'],
+    ['ENG1', '영어Ⅰ', '2', '4', '영어']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'SubjectMeta');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }

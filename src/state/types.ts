@@ -3,6 +3,8 @@ export type Student = {
   studentNo: string;
   name: string;
   selectedSubjects: string[];
+  classNum?: string;
+  studentNum?: number;
 };
 
 export type ClassRoom = {

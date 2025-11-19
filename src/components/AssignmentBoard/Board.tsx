@@ -83,14 +83,6 @@ export function AssignmentBoard() {
     <div className="stack">
       <h2>반 배정</h2>
       <div className="cluster" style={{ marginBottom: 8 }}>
-        <div style={{ fontWeight: 600 }}>일괄 이동</div>
-        <span style={{ fontSize: 12 }} className="muted">선택: {selectedIds.length}명</span>
-        <select value={bulkTarget} onChange={e => setBulkTarget(e.target.value)}>
-          <option value="unassigned">미배정</option>
-          {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <button className="btn btn--primary" disabled={selectedIds.length === 0} onClick={() => moveSelected(bulkTarget)}>이동</button>
-        <button className="btn" disabled={selectedIds.length === 0} onClick={clearSelection}>선택 해제</button>
         <span style={{ marginLeft: 'auto' }} />
         <button className="btn" onClick={() => {
           const data = exportJson();
@@ -112,27 +104,7 @@ export function AssignmentBoard() {
           }} />
         </label>
       </div>
-      <div className="cluster" style={{ marginBottom: 8 }}>
-        <button className="btn" onClick={() => {
-          const data = exportJson();
-          const blob = new Blob([data], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'banbaejung_state.json';
-          a.click();
-          URL.revokeObjectURL(url);
-        }}>JSON 내보내기</button>
-        <label className="btn" style={{ cursor: 'pointer' }}>
-          JSON 가져오기
-          <input type="file" accept="application/json" style={{ display: 'none' }} onChange={async e => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            const text = await f.text();
-            importJson(text);
-          }} />
-        </label>
-      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
         <SortingPanel />
         <FilterPanel />
@@ -173,8 +145,24 @@ export function AssignmentBoard() {
           </div>
         </div>
       )}
+      <div className="cluster" style={{ marginBottom: 8 }}>
+        <div style={{ fontWeight: 600 }}>일괄 이동</div>
+        <span style={{ fontSize: 12 }} className="muted">선택: {selectedIds.length}명</span>
+        <select value={bulkTarget} onChange={e => setBulkTarget(e.target.value)}>
+          <option value="unassigned">미배정</option>
+          {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button className="btn btn--primary" disabled={selectedIds.length === 0} onClick={() => moveSelected(bulkTarget)}>이동</button>
+        <button className="btn" disabled={selectedIds.length === 0} onClick={clearSelection}>선택 해제</button>
+      </div>
       <DndContext onDragEnd={onDragEnd}>
-        <div style={{ display: 'grid', gridTemplateColumns: `1fr repeat(${classes.length}, 1fr)`, gap: 12 }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `minmax(280px, 1fr) repeat(${classes.length}, minmax(280px, 1fr))`,
+          gap: 12,
+          overflowX: 'auto',
+          paddingBottom: 16
+        }}>
           <Column id="unassigned" title="미배정" students={unassigned} visibleCount={unassigned.length} hiddenCount={unassignedHidden} />
           {classViews.map(({ cls, visible, hidden }) => (
             <Column
