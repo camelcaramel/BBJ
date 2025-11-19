@@ -7,10 +7,12 @@ import { GroupBuilder } from './components/GroupBuilder';
 import { AssignmentBoard } from './components/AssignmentBoard/Board';
 import { ThemeToggle } from './components/Controls/ThemeToggle';
 import { loadTheme } from './utils/persist';
+import { ClassAssignment } from './components/ClassAssignment';
 
 function App() {
   const step = useAppStore(s => s.currentStep);
   const hydrate = useAppStore(s => s.hydrate);
+  const setStep = useAppStore(s => s.setStep);
 
   useEffect(() => {
     hydrate();
@@ -31,6 +33,7 @@ function App() {
       {step === 'upload' && <ExcelUploader />}
       {step === 'group' && <GroupBuilder />}
       {step === 'assign' && <AssignmentBoard />}
+      {step === 'auto-assign' && <ClassAssignment />}
     </div>
   )
 }

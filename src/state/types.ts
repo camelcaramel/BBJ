@@ -42,7 +42,7 @@ export type AppState = {
   groups: Group[];
   sortRules: SortRule[];
   filters: Filters;
-  currentStep: 'setup' | 'upload' | 'group' | 'assign';
+  currentStep: 'setup' | 'upload' | 'group' | 'assign' | 'auto-assign';
   selectedIds: string[];
 };
 
