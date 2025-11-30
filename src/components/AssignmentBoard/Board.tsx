@@ -8,6 +8,9 @@ import { StackedBarRecharts } from '../Charts/StackedBarRecharts';
 import { SortingPanel } from '../Controls/SortingPanel';
 import { FilterPanel } from '../Controls/FilterPanel';
 import { ValidationPanel } from '../Controls/ValidationPanel';
+import { calculateMovingClasses, type ScheduleResult, type ScheduleOption } from '../../utils/scheduler';
+import type { SubjectMeta } from '../../utils/classAllocator';
+
 
 export function AssignmentBoard() {
   const classes = useAppStore(s => s.classes);
@@ -24,6 +27,59 @@ export function AssignmentBoard() {
   const moveSelected = useAppStore(s => s.moveSelected);
   const clearSelection = useAppStore(s => s.clearSelection);
   const [bulkTarget, setBulkTarget] = useState<string>('unassigned');
+
+  // Moving Class State
+  const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
+  const [scheduleOption, setScheduleOption] = useState<ScheduleOption>('min-blocks');
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  // We need subject metas for the scheduler. 
+  // Ideally this should be in the store, but for now we might need to pass it or assume it's available.
+  // Wait, ClassAssignment.tsx had `subjectMetas`. But it didn't save it to the store.
+  // We need to persist subjectMetas to the store or re-upload.
+  // For now, I'll assume the user has to re-upload or we mock it? 
+  // No, that's bad UX.
+  // I should check if `subjectMetas` are saved. `store.ts` doesn't have `subjectMetas`.
+  // I will add `subjectMetas` to `AppState` in `types.ts` and `store.ts` first?
+  // Or I can just ask the user to upload the meta file again here?
+  // Let's check `ClassAssignment.tsx` again. It sets `subjectMetas` state but doesn't pass to store.
+  // I will add a file input for "Subject Meta" here if it's missing, OR I will modify `store` to keep it.
+  // Modifying store is better. But I am in the middle of editing Board.tsx.
+  // I'll add a temporary file uploader for Meta here if needed, or just assume we need to add it to store.
+  // Let's add it to store. It's cleaner.
+  // But I can't edit store in parallel.
+  // I will add a "Load Meta" button here for now.
+
+  const [loadedMetas, setLoadedMetas] = useState<SubjectMeta[]>([]);
+
+  const handleSchedule = async () => {
+    if (loadedMetas.length === 0) {
+      alert('Please upload Subject Meta file first.');
+      return;
+    }
+    setIsScheduling(true);
+    try {
+      // We need to re-parse the meta file if not loaded? 
+      // Actually if we have loadedMetas we are good.
+      const result = calculateMovingClasses(classes, students, loadedMetas, scheduleOption);
+      setScheduleResult(result);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleMetaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Dynamic import to avoid circular dependency if any, or just import normally
+    const { parseSubjectMeta } = await import('../../utils/classAllocator');
+    const metas = await parseSubjectMeta(file);
+    setLoadedMetas(metas);
+    alert(`Loaded ${metas.length} subject metas.`);
+  };
+
 
   const applyFilters = (arr: any[]) => {
     let out = arr;
@@ -110,6 +166,92 @@ export function AssignmentBoard() {
         <FilterPanel />
         <ValidationPanel />
       </div>
+
+      <div className="card" style={{ marginBottom: 16, padding: 16, border: '1px solid #ddd' }}>
+        <div className="cluster" style={{ marginBottom: 12 }}>
+          <h3>이동 수업 최적화 (Moving Class Optimization)</h3>
+          <span style={{ marginLeft: 'auto' }} />
+          {loadedMetas.length === 0 && (
+            <label className="btn">
+              Upload Subject Meta
+              <input type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleMetaUpload} />
+            </label>
+          )}
+          {loadedMetas.length > 0 && <span className="muted">Meta Loaded ({loadedMetas.length})</span>}
+        </div>
+
+        <div className="cluster" style={{ marginBottom: 12 }}>
+          <label>
+            <input
+              type="radio"
+              name="opt"
+              checked={scheduleOption === 'min-blocks'}
+              onChange={() => setScheduleOption('min-blocks')}
+            />
+            Minimize Time Blocks
+          </label>
+          <label style={{ marginLeft: 16 }}>
+            <input
+              type="radio"
+              name="opt"
+              checked={scheduleOption === 'min-space'}
+              onChange={() => setScheduleOption('min-space')}
+            />
+            Minimize Space (Concurrent)
+          </label>
+          <button className="btn btn--primary" style={{ marginLeft: 16 }} onClick={handleSchedule} disabled={isScheduling || loadedMetas.length === 0}>
+            {isScheduling ? 'Calculating...' : 'Calculate Schedule'}
+          </button>
+        </div>
+
+        {scheduleResult && (
+          <div>
+            <div className="cluster" style={{ marginBottom: 8 }}>
+              <strong>Results:</strong>
+              <span>Total Blocks: {scheduleResult.metrics.totalBlocks}</span>
+              <span>Max Concurrent: {scheduleResult.metrics.maxConcurrent}</span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ border: '1px solid #ddd', padding: 8, width: 80 }}>Block</th>
+                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Subjects (Classes)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduleResult.blocks.map(block => (
+                    <tr key={block.id}>
+                      <td style={{ border: '1px solid #ddd', padding: 8, textAlign: 'center' }}>
+                        Block {block.id}
+                      </td>
+                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 8 }}>
+                          {block.classDetails?.map((detail, i) => (
+                            <div key={i} style={{ background: '#fff', border: '1px solid #eee', padding: 8, borderRadius: 4, fontSize: 11 }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: 4, borderBottom: '1px solid #eee', paddingBottom: 2 }}>
+                                {detail.subjectName} <span style={{ color: '#666' }}>({detail.totalStudents}명)</span>
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {detail.movements.map((m, j) => (
+                                  <span key={j} style={{ background: '#e3f2fd', padding: '2px 4px', borderRadius: 2 }}>
+                                    {m.adminClass}반({m.count})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
       {selectedGroup && (
         <div style={{ marginBottom: 16, minWidth: 0 }}>
           <div className="cluster" style={{ marginBottom: 8 }}>
