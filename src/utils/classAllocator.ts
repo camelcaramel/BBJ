@@ -138,13 +138,110 @@ export function runAdaptiveClustering(
   subjects: SubjectMeta[],
   config: AllocationConfig
 ): ClassGroup[] {
-  const { cMin, cMax, kStart } = config;
-  let remainingStudents = [...students];
+  const { cMin } = config;
   const classes: ClassGroup[] = [];
   let classCounter = 1;
 
   // Map subject code to object for easy lookup
   const subjectMap = new Map(subjects.map(s => [s.code, s]));
+
+  // --- 1. Partition Students by Profile ---
+  // Profile = Map<Category, Count> + TotalCredits
+  type StudentProfile = {
+    key: string;
+    totalCredits: number;
+    students: StudentData[];
+  };
+
+  const profileMap = new Map<string, StudentProfile>();
+
+  students.forEach(student => {
+    let totalCredits = 0;
+    const categoryCounts = new Map<string, number>();
+
+    student.subjects.forEach(code => {
+      const sub = subjectMap.get(code);
+      if (sub) {
+        totalCredits += sub.credit;
+        const cat = sub.category || 'Uncategorized';
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+      }
+    });
+
+    // Create Profile Key: "Math:1|Science:2"
+    const sortedCats = Array.from(categoryCounts.keys()).sort();
+    const profileParts = sortedCats.map(cat => `${cat}:${categoryCounts.get(cat)}`);
+    const profileKey = profileParts.join('|');
+
+    // We group by Profile Key AND Total Credits to be safe, 
+    // though usually Profile Key implies Credits if credits are uniform per category.
+    // But user said "Subjects in a group have same credits", so Profile Key is strong.
+    // Let's include TotalCredits in key just in case.
+    const fullKey = `${profileKey}#${totalCredits}`;
+
+    if (!profileMap.has(fullKey)) {
+      profileMap.set(fullKey, { key: fullKey, totalCredits, students: [] });
+    }
+    profileMap.get(fullKey)!.students.push(student);
+  });
+
+  // --- 2. Smart Merging (Fallback) ---
+  // If a partition is too small (< cMin), try to merge with others of SAME TotalCredits.
+  const partitions = Array.from(profileMap.values());
+  const validPartitions: StudentProfile[] = [];
+  const smallPartitions: StudentProfile[] = [];
+
+  partitions.forEach(p => {
+    if (p.students.length >= cMin) {
+      validPartitions.push(p);
+    } else {
+      smallPartitions.push(p);
+    }
+  });
+
+  // Merge small partitions by TotalCredits
+  const mergedSmallMap = new Map<number, StudentData[]>();
+  smallPartitions.forEach(p => {
+    if (!mergedSmallMap.has(p.totalCredits)) {
+      mergedSmallMap.set(p.totalCredits, []);
+    }
+    mergedSmallMap.get(p.totalCredits)!.push(...p.students);
+  });
+
+  // Re-evaluate merged partitions
+  mergedSmallMap.forEach((mergedStudents, credits) => {
+    // If still too small? We have no choice but to keep them or merge with different credits (bad).
+    // For now, we keep them as a valid partition even if small, 
+    // or we could mark them as "Mixed" immediately.
+    // Let's treat them as a valid partition to try clustering.
+    validPartitions.push({
+      key: `Merged_${credits}`,
+      totalCredits: credits,
+      students: mergedStudents
+    });
+  });
+
+  // --- 3. Run Clustering on Each Partition ---
+  validPartitions.forEach(partition => {
+    const partitionClasses = runClusteringOnSubset(partition.students, subjectMap, config, classCounter);
+    classes.push(...partitionClasses);
+    classCounter += partitionClasses.length;
+  });
+
+  return classes;
+}
+
+// Extracted original logic into a helper function
+function runClusteringOnSubset(
+  subsetStudents: StudentData[],
+  subjectMap: Map<string, SubjectMeta>,
+  config: AllocationConfig,
+  startId: number
+): ClassGroup[] {
+  const { cMin, cMax, kStart } = config;
+  let remainingStudents = [...subsetStudents];
+  const subsetClasses: ClassGroup[] = [];
+  let currentId = startId;
 
   // Helper to calculate combination weight
   const getComboWeight = (combo: string[]) => {
@@ -257,9 +354,9 @@ export function runAdaptiveClustering(
           // Create Classes
           for (let i = 0; i < numClasses; i++) {
             const classStudents = studentsToAssign.slice(i * cMax, (i + 1) * cMax);
-            classes.push({
-              id: classCounter++,
-              name: `${classCounter - 1}반`,
+            subsetClasses.push({
+              id: currentId++,
+              name: `${currentId - 1}반`,
               coreSubjects: comboSubjects,
               students: classStudents,
               warnings: [...warnings]
@@ -280,15 +377,15 @@ export function runAdaptiveClustering(
   // Group remaining students into mixed classes
   while (remainingStudents.length > 0) {
     const chunk = remainingStudents.splice(0, cMax);
-    classes.push({
-      id: classCounter++,
-      name: `${classCounter - 1}반 (Mixed)`,
+    subsetClasses.push({
+      id: currentId++,
+      name: `${currentId - 1}반 (Mixed)`,
       coreSubjects: ['Mixed'],
       students: chunk,
       warnings: ['Mixed Class - Prioritize in Timetable']
     });
   }
-  return classes;
+  return subsetClasses;
 }
 
 // Helper for combinations

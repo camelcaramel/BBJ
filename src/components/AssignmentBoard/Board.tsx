@@ -61,7 +61,8 @@ export function AssignmentBoard() {
     try {
       // We need to re-parse the meta file if not loaded? 
       // Actually if we have loadedMetas we are good.
-      const result = calculateMovingClasses(classes, students, loadedMetas, scheduleOption);
+      const minSize = classes.length > 0 ? classes[0].minSize : 0;
+      const result = calculateMovingClasses(classes, students, loadedMetas, scheduleOption, minSize);
       setScheduleResult(result);
     } catch (e: any) {
       alert(e.message);
@@ -211,6 +212,17 @@ export function AssignmentBoard() {
               <span>Total Blocks: {scheduleResult.metrics.totalBlocks}</span>
               <span>Max Concurrent: {scheduleResult.metrics.maxConcurrent}</span>
             </div>
+            {scheduleResult.warnings.length > 0 && (
+              <div style={{ marginBottom: 8, padding: 8, background: '#fff3cd', borderRadius: 4, fontSize: 12 }}>
+                {scheduleResult.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
+              </div>
+            )}
+            {scheduleResult.violations && scheduleResult.violations.length > 0 && (
+              <div style={{ marginBottom: 8, padding: 8, background: '#ffebee', borderRadius: 4, fontSize: 12, color: '#c62828' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Constraint Violations:</div>
+                {scheduleResult.violations.map((v, i) => <div key={i}>🚫 {v}</div>)}
+              </div>
+            )}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
@@ -227,20 +239,32 @@ export function AssignmentBoard() {
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: 8 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 8 }}>
-                          {block.classDetails?.map((detail, i) => (
-                            <div key={i} style={{ background: '#fff', border: '1px solid #eee', padding: 8, borderRadius: 4, fontSize: 11 }}>
-                              <div style={{ fontWeight: 'bold', marginBottom: 4, borderBottom: '1px solid #eee', paddingBottom: 2 }}>
-                                {detail.subjectName} <span style={{ color: '#666' }}>({detail.totalStudents}명)</span>
+                          {block.classDetails?.map((detail, i) => {
+                            // Lookup student names for Hover UI
+                            const instanceInfo = scheduleResult.instanceMap.get(detail.instanceId);
+                            const studentNames = instanceInfo
+                              ? instanceInfo.students.map(sid => students[sid]?.name).filter(Boolean).join(', ')
+                              : '';
+
+                            return (
+                              <div
+                                key={i}
+                                style={{ background: '#fff', border: '1px solid #eee', padding: 8, borderRadius: 4, fontSize: 11 }}
+                                title={studentNames} // Hover UI
+                              >
+                                <div style={{ fontWeight: 'bold', marginBottom: 4, borderBottom: '1px solid #eee', paddingBottom: 2 }}>
+                                  {detail.subjectName} <span style={{ color: '#666' }}>({detail.totalStudents}명)</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                  {detail.movements.map((m, j) => (
+                                    <span key={j} style={{ background: '#e3f2fd', padding: '2px 4px', borderRadius: 2 }}>
+                                      {m.adminClass}반({m.count})
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                {detail.movements.map((m, j) => (
-                                  <span key={j} style={{ background: '#e3f2fd', padding: '2px 4px', borderRadius: 2 }}>
-                                    {m.adminClass}반({m.count})
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </td>
                     </tr>
