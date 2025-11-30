@@ -138,12 +138,63 @@ export function runAdaptiveClustering(
   subjects: SubjectMeta[],
   config: AllocationConfig
 ): ClassGroup[] {
-  const { cMin } = config;
+  const { cMin, cMax } = config;
   const classes: ClassGroup[] = [];
   let classCounter = 1;
 
   // Map subject code to object for easy lookup
   const subjectMap = new Map(subjects.map(s => [s.code, s]));
+
+  const remainingStudents = new Set(students);
+
+  // --- 0. Exact Match First Strategy ---
+  // Group students by exact subject combination
+  const exactMatchMap = new Map<string, StudentData[]>();
+
+  students.forEach(s => {
+    const key = s.subjects.slice().sort().join('|');
+    if (!exactMatchMap.has(key)) exactMatchMap.set(key, []);
+    exactMatchMap.get(key)!.push(s);
+  });
+
+  exactMatchMap.forEach((groupStudents) => {
+    const size = groupStudents.length;
+    if (size === 0) return;
+
+    // Check if we can form valid classes
+    // We want to minimize number of classes while keeping size <= cMax
+    let numClasses = Math.ceil(size / cMax);
+    if (numClasses === 0) numClasses = 1;
+
+    const avgSize = size / numClasses;
+
+    // Only form pure classes if they meet the minimum size requirement
+    // Or if the group is large enough that we should prioritize keeping them together
+    // If avgSize < cMin, we might be better off mixing them in K-Cascade.
+    if (avgSize >= cMin) {
+      // Distribute students into numClasses
+      const baseSize = Math.floor(size / numClasses);
+      const remainder = size % numClasses;
+
+      let startIndex = 0;
+      for (let i = 0; i < numClasses; i++) {
+        const count = baseSize + (i < remainder ? 1 : 0);
+        const chunk = groupStudents.slice(startIndex, startIndex + count);
+        startIndex += count;
+
+        classes.push({
+          id: classCounter++,
+          name: `${classCounter - 1}반 (Pure)`,
+          coreSubjects: groupStudents[0].subjects, // All have same subjects
+          students: chunk,
+          warnings: []
+        });
+
+        // Remove from remaining
+        chunk.forEach(s => remainingStudents.delete(s));
+      }
+    }
+  });
 
   // --- 1. Partition Students by Profile ---
   // Profile = Map<Category, Count> + TotalCredits
@@ -155,7 +206,7 @@ export function runAdaptiveClustering(
 
   const profileMap = new Map<string, StudentProfile>();
 
-  students.forEach(student => {
+  remainingStudents.forEach(student => {
     let totalCredits = 0;
     const categoryCounts = new Map<string, number>();
 
